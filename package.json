@@ -1,0 +1,16 @@
+{
+  "name": "yuske-side-job-agent",
+  "version": "1.0.0",
+  "description": "スマホ副業AIエージェント - スマホだけで月10万円を目指す副業を提案・計画するAIエージェント",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
+  }
+}
