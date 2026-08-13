@@ -52,6 +52,14 @@ body {
   color: var(--muted);
 }
 
+.tool-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
 .reset-btn {
   position: absolute;
   top: 16px;

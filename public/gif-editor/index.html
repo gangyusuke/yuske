@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>アニGIFエディタ</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div>
+        <h1>🎞️ アニGIFエディタ</h1>
+        <p class="subtitle">画像を並べて、動かして、アニメGIFを作るツール</p>
+      </div>
+      <a class="back-link" href="/">← ホームに戻る</a>
+    </header>
+
+    <main class="editor">
+      <!-- フレームパネル -->
+      <section class="panel frames-panel">
+        <h2>フレーム</h2>
+        <p class="hint">
+          必要な素材: アニメーションにしたい静止画を複数枚用意してください（PNG/JPG/WebP）。
+          手元に画像が無い場合は「サンプルフレームを生成」で試せます。
+        </p>
+
+        <div class="frame-add-buttons">
+          <label class="file-btn">
+            画像を追加
+            <input type="file" id="fileInput" accept="image/*" multiple hidden />
+          </label>
+          <button type="button" id="sampleBtn" class="secondary-btn">サンプルフレームを生成</button>
+        </div>
+
+        <ol id="frameList" class="frame-list"></ol>
+
+        <div class="bulk-duration">
+          <label>
+            全フレームの表示時間(ms)
+            <input type="number" id="bulkDuration" min="20" max="5000" step="10" value="200" />
+          </label>
+          <button type="button" id="applyBulkDuration" class="secondary-btn">一括適用</button>
+        </div>
+      </section>
+
+      <!-- プレビューパネル -->
+      <section class="panel preview-panel">
+        <h2>プレビュー</h2>
+        <div class="canvas-wrap">
+          <canvas id="previewCanvas" width="320" height="240"></canvas>
+        </div>
+        <div class="preview-controls">
+          <button type="button" id="playBtn" class="secondary-btn">▶ 再生</button>
+          <button type="button" id="prevFrameBtn" class="secondary-btn">◀ 1コマ</button>
+          <span id="frameCounter" class="frame-counter">0 / 0</span>
+          <button type="button" id="nextFrameBtn" class="secondary-btn">1コマ ▶</button>
+        </div>
+
+        <div class="export-block">
+          <button type="button" id="exportBtn" class="primary-btn">GIFを書き出す</button>
+          <progress id="exportProgress" max="100" value="0" hidden></progress>
+          <div id="resultWrap" class="result-wrap" hidden>
+            <img id="resultImg" alt="生成されたGIF" />
+            <a id="downloadLink" class="secondary-btn" download>ダウンロード</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 設定パネル -->
+      <section class="panel settings-panel">
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="transform">変形・フィルター</button>
+          <button type="button" class="tab-btn" data-tab="text">テキスト</button>
+          <button type="button" class="tab-btn" data-tab="output">出力設定</button>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="transform">
+          <p class="hint">選択中のフレームに適用されます（フレームをクリックして選択）。</p>
+          <div class="row">
+            <button type="button" id="flipHBtn" class="secondary-btn">左右反転</button>
+            <button type="button" id="flipVBtn" class="secondary-btn">上下反転</button>
+            <button type="button" id="rotateBtn" class="secondary-btn">90°回転</button>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" id="grayscaleChk" /> グレースケール</label>
+          <label class="checkbox-row"><input type="checkbox" id="sepiaChk" /> セピア</label>
+          <label class="checkbox-row"><input type="checkbox" id="invertChk" /> 色反転</label>
+          <label class="slider-row">
+            明るさ
+            <input type="range" id="brightnessRange" min="-100" max="100" value="0" />
+          </label>
+          <label class="slider-row">
+            コントラスト
+            <input type="range" id="contrastRange" min="-100" max="100" value="0" />
+          </label>
+          <button type="button" id="applyAllBtn" class="secondary-btn full-width">この設定を全フレームに適用</button>
+        </div>
+
+        <div class="tab-panel hidden" data-tab-panel="text">
+          <p class="hint">追加したテキストは全フレームの同じ位置に表示されます。</p>
+          <div class="text-form">
+            <input type="text" id="textContent" placeholder="テキストを入力" maxlength="40" />
+            <div class="row">
+              <label>X% <input type="number" id="textX" min="0" max="100" value="50" /></label>
+              <label>Y% <input type="number" id="textY" min="0" max="100" value="85" /></label>
+            </div>
+            <div class="row">
+              <label>サイズ <input type="number" id="textSize" min="8" max="96" value="28" /></label>
+              <label>色 <input type="color" id="textColor" value="#ffffff" /></label>
+            </div>
+            <label class="checkbox-row"><input type="checkbox" id="textOutlineChk" checked /> 縁取りをつける</label>
+            <button type="button" id="addTextBtn" class="secondary-btn full-width">テキストを追加</button>
+          </div>
+          <ul id="textList" class="text-list"></ul>
+        </div>
+
+        <div class="tab-panel hidden" data-tab-panel="output">
+          <label class="field-row">
+            出力サイズ 幅
+            <input type="number" id="outWidth" min="16" max="1024" value="320" />
+          </label>
+          <label class="field-row">
+            出力サイズ 高さ
+            <input type="number" id="outHeight" min="16" max="1024" value="240" />
+          </label>
+          <button type="button" id="matchSizeBtn" class="secondary-btn full-width">最初のフレームのサイズに合わせる</button>
+
+          <label class="field-row">
+            フィット方法
+            <select id="fitMode">
+              <option value="contain">収める（余白あり）</option>
+              <option value="cover">埋める（はみ出しトリミング）</option>
+              <option value="stretch">引き伸ばす</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            背景色
+            <input type="color" id="bgColor" value="#ffffff" />
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="transparentChk" /> 背景を透過させる（背景色を透明として書き出し）
+          </label>
+
+          <label class="field-row">
+            ループ
+            <select id="loopSelect">
+              <option value="0">無限ループ</option>
+              <option value="-1">1回のみ再生</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            画質（小さいほど高画質・重い）
+            <input type="range" id="qualityRange" min="1" max="30" value="10" />
+          </label>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="vendor/gif.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
