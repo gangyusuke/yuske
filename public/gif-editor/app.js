@@ -103,6 +103,34 @@ function loadImageFromFile(file) {
   });
 }
 
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+async function importHandoffFrames() {
+  const raw = sessionStorage.getItem('lipsyncHandoffFrames');
+  if (!raw) return;
+  sessionStorage.removeItem('lipsyncHandoffFrames');
+  try {
+    const payload = JSON.parse(raw);
+    for (const item of payload) {
+      const img = await loadImageFromDataUrl(item.dataUrl);
+      const frame = makeFrame(img, item.duration);
+      frames.push(frame);
+      if (!selectedFrameId) selectedFrameId = frame.id;
+    }
+    renderFrameList();
+    renderPreview();
+  } catch (err) {
+    console.error('口パクアニメの引き継ぎに失敗しました', err);
+  }
+}
+
 // ---- サンプルフレーム生成（バウンドするボール） ----
 function generateSampleFrames() {
   const steps = 8;
@@ -569,3 +597,4 @@ exportBtn.addEventListener('click', async () => {
 renderFrameList();
 renderTextList();
 renderPreview();
+importHandoffFrames();
