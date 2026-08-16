@@ -63,6 +63,21 @@ ASPから正式に紹介を受けた確定案件であり、報酬単価・承�
 | 16 | 1日10件上限の増枠交渉条件 | 必要実績・運用期間が未確認 | 要検証：同上 |
 | 17 | 案件を紹介しているASP名 | 申込LPのURL（`ssfla901_fel_cf`）から felmat の可能性があるが未確認 <!-- 推定 --> | 要検証：実際の管理画面で確認 |
 
+## 7. Claude Codeエージェント/コマンド基盤（Phase4）に関する未確認事項
+
+`.claude/agents/`・`.claude/commands/`・`CLAUDE.md`のフロントマター仕様は
+2026-08-16時点で以下の公式ドキュメントをWebFetchで確認した上で作成した：
+- https://code.claude.com/docs/en/sub-agents（サブエージェントのfrontmatter仕様）
+- https://code.claude.com/docs/en/skills（`.claude/commands/`のfrontmatter仕様。
+  現行ドキュメントでは「カスタムコマンドはスキルに統合された」とされており、
+  `.claude/commands/*.md`は引き続き同じ挙動で動作するが`name`/`paths`フィールドは
+  無視される、と明記されている）
+
+| # | 項目 | 内容 | ステータス |
+|---|---|---|---|
+| 22 | サブエージェント`tools`フロントマターでのBash細粒度制限構文 | `Bash(python3 scripts/analyze.py)`のように特定コマンドのみ許可する構文が
+`tools:`フィールドで実際に機能するか、参照した公式ドキュメントの範囲では確認できなかった（`Agent(worker, researcher)`という制限例は確認できたが、Bashの引数制限例は確認できていない）。`.claude/agents/performance-analyst.md`では`tools: Read, Grep, Glob, Bash`とフルのBash許可にした上で、実行範囲の限定はプロンプト指示（ソフトな制約）に委ねている | 要検証：実際にサブエージェントを動かして実効的な制限がかかるか確認する。かからない場合はBash権限自体を外す運用に切り替える |
+
 ---
 **運用ルール：** 新しい仮定を追加する際は、必ずこの表に追記し、区分とステータスを明記すること。
 「要検証」の項目を実データ・公式回答で確定させたら、ステータスを「確定（YYYY-MM-DD時点）」に更新する。
