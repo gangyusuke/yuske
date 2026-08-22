@@ -53,6 +53,20 @@ Blender を起動しサーバーを Start した状態で、Claude Code で例�
 - 「今あるCubeを右に2m移動して、少し回転させて」
 - 「シーンをレンダリングして画像を見せて」
 
+## サンプル: 可愛いプリンキャラクター
+
+`examples/pudding_character.py` は、カラメルの垂れ・目・ほっぺ・スマイル・手つきの
+可愛いプリンキャラクターと皿を手続き的に生成し、レンダリングまで行うサンプルスクリプトです。
+
+```bash
+blender --background --python examples/pudding_character.py
+```
+
+を実行すると、カレントディレクトリに `pudding_render.png` と `pudding.blend` が生成されます。
+Claude Code から `execute_blender_code` ツール経由でこのスクリプトの内容を渡せば、起動中の
+Blender 上に同じキャラクターを直接作らせることもできます (その場合は末尾のレンダー設定・保存の
+ブロックは不要です)。
+
 ## 提供する MCP ツール
 
 | ツール | 説明 |
