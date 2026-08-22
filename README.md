@@ -33,3 +33,9 @@ npm start
 
 - 収益を保証するものではありません。あくまで計画づくりの補助ツールです。
 - `ANTHROPIC_API_KEY` は `.env` にのみ保存し、リポジトリにコミットしないでください。
+
+## Blender × Claude Code MCP エージェント
+
+`blender-mcp/` に、Blender と Claude Code を MCP (Model Context Protocol) 経由で接続し、
+自然言語で 3D モデリングやマテリアル設定を行えるエージェントを追加しています。
+詳細は [`blender-mcp/README.md`](./blender-mcp/README.md) を参照してください。
