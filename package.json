@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "fantasy": "node fantasy/run.js"
+    "fantasy": "node fantasy/run.js",
+    "fantasy:check": "node fantasy/checkSetup.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

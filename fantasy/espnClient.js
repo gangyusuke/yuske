@@ -89,4 +89,35 @@ async function setLineupSlot({ year, leagueId, teamId, playerId, fromLineupSlotI
   return espnWrite(url, body);
 }
 
-module.exports = { getLeagueSnapshot, getFreeAgents, getNflWeekSchedule, setLineupSlot, PRO_TEAM_MAP };
+const BENCH_SLOT_ID = 20;
+
+/**
+ * [実験的/未検証] ウェイバー請求（add + drop）の送信。
+ * setLineupSlot よりさらに検証が薄い書き込み（優先権処理を伴う非同期トランザクションのため）。
+ * DRY_RUN=true で提案内容とログを何週か確認し、納得してから有効化すること。
+ * うまく動かない場合は、通知内容を見てESPNアプリから手動で請求する運用に切り替えるのが安全。
+ */
+async function submitWaiverClaim({ year, leagueId, teamId, addPlayerId, dropPlayerId }) {
+  const url = `${WRITE_BASE(year, leagueId)}/transactions/`;
+  const items = [{ playerId: addPlayerId, type: 'ADD', fromLineupSlotId: -1, toLineupSlotId: BENCH_SLOT_ID }];
+  if (dropPlayerId) {
+    items.push({ playerId: dropPlayerId, type: 'DROP', fromLineupSlotId: BENCH_SLOT_ID, toLineupSlotId: -1 });
+  }
+  const body = {
+    isLeagueManager: false,
+    teamId,
+    type: 'WAIVER',
+    memberId: process.env.ESPN_SWID,
+    items,
+  };
+  return espnWrite(url, body);
+}
+
+module.exports = {
+  getLeagueSnapshot,
+  getFreeAgents,
+  getNflWeekSchedule,
+  setLineupSlot,
+  submitWaiverClaim,
+  PRO_TEAM_MAP,
+};

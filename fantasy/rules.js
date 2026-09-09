@@ -3,6 +3,7 @@
 // 実際にESPNへ書き込むかどうかは run.js が DRY_RUN フラグを見て判断する。
 
 const SLOT = { QB: 0, RB: 2, WR: 4, TE: 6, DST: 16, K: 17, BENCH: 20, IR: 21, FLEX: 23 };
+const POS_NAME = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DST' };
 const BENCH_SLOTS = new Set([SLOT.BENCH]);
 const STARTER_SLOTS = new Set([SLOT.QB, SLOT.RB, SLOT.WR, SLOT.TE, SLOT.DST, SLOT.K, SLOT.FLEX]);
 
@@ -119,7 +120,6 @@ function planIRMoves({ roster, settings }) {
  */
 function buildWaiverSuggestions({ freeAgentsResponse, focusPositions = ['RB'], top = 8 }) {
   const players = freeAgentsResponse?.players || [];
-  const posName = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DST' };
 
   const scored = players
     .map((p) => {
@@ -127,7 +127,7 @@ function buildWaiverSuggestions({ freeAgentsResponse, focusPositions = ['RB'], t
       return {
         id: player.id,
         name: player.fullName,
-        pos: posName[player.defaultPositionId] || '?',
+        pos: POS_NAME[player.defaultPositionId] || '?',
         percentOwned: player.ownership?.percentOwned ?? 0,
         percentChange: player.ownership?.percentChange ?? 0,
         status: player.injuryStatus,
@@ -149,6 +149,7 @@ function buildWaiverSuggestions({ freeAgentsResponse, focusPositions = ['RB'], t
 
 module.exports = {
   SLOT,
+  POS_NAME,
   LOCKOUT_STATUSES,
   IR_ELIGIBLE_STATUSES,
   projectedPoints,

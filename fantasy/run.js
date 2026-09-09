@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const espn = require('./espnClient');
 const rules = require('./rules');
+const waiverAgent = require('./waiverAgent');
 const { sendDiscord } = require('./notify');
 const { loadState, saveState } = require('./state');
 
@@ -120,17 +121,62 @@ async function main() {
   if (weekday === 2 && !state.dailyNotices[noticeKey('waiver-tue')]) {
     const fa = await espn.getFreeAgents({ year: YEAR, leagueId: LEAGUE_ID, scoringPeriodId: week });
     const { focused, overall } = rules.buildWaiverSuggestions({ freeAgentsResponse: fa, focusPositions: ['RB'] });
-    const lines = [
-      '📋 **火曜: ウェイバー請求リマインド**',
-      'このリーグは順位が毎週逆順リセットなので、毎週1件は出すのが正解です。',
-      '',
-      '**RB（薄いポジション）トレンド上位**',
-      ...focused.map((p) => `- ${p.name} (${p.pos}) 所有率 ${p.percentOwned.toFixed(1)}% (7日変化 ${p.percentChange.toFixed(1)})`),
-      '',
-      '**全体トレンド上位**',
-      ...overall.slice(0, 5).map((p) => `- ${p.name} (${p.pos}) 所有率 ${p.percentOwned.toFixed(1)}% (7日変化 ${p.percentChange.toFixed(1)})`),
-    ];
-    messages.push(lines.join('\n'));
+    const candidateMap = new Map();
+    for (const p of [...focused, ...overall]) candidateMap.set(p.id, p);
+    const candidates = [...candidateMap.values()].slice(0, 12);
+
+    const rosterForAgent = rosterEntries.map((e) => {
+      const p = e.playerPoolEntry.player;
+      return {
+        id: p.id,
+        name: p.fullName,
+        pos: rules.POS_NAME[p.defaultPositionId] || '?',
+        team: espn.PRO_TEAM_MAP[p.proTeamId] || '?',
+        status: p.injuryStatus,
+        projected: rules.projectedPoints(p, week),
+        slot: e.lineupSlotId === rules.SLOT.BENCH ? 'BE' : 'START',
+      };
+    });
+
+    let moves = [];
+    try {
+      moves = await waiverAgent.decideWaiverMoves({
+        roster: rosterForAgent,
+        freeAgents: candidates,
+        week,
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+    } catch (err) {
+      messages.push(`⚠️ **[ウェイバー]** 判断エージェントの呼び出しに失敗しました: ${err.message}`);
+    }
+
+    if (moves.length === 0) {
+      messages.push(
+        '📋 **火曜: ウェイバー判断**\n' +
+        'エージェントが今週の候補を評価し、良いadd/drop候補なしと判断しました（優先権は来週また逆順リセットされます）。'
+      );
+    } else {
+      for (const move of moves) {
+        const key = `waiver-${week}-${move.addPlayerId}-${move.dropPlayerId}`;
+        if (state.executedActions.includes(key)) continue;
+
+        messages.push(
+          `📋 **[ウェイバー]** ${move.dropPlayerName} → ${move.addPlayerName} を請求${DRY_RUN ? '（提案・DRY_RUN）' : ''}\n理由: ${move.reason}`
+        );
+
+        if (!DRY_RUN) {
+          try {
+            await espn.submitWaiverClaim({
+              year: YEAR, leagueId: LEAGUE_ID, teamId: TEAM_ID,
+              addPlayerId: move.addPlayerId, dropPlayerId: move.dropPlayerId,
+            });
+          } catch (err) {
+            messages.push(`⚠️ ウェイバー請求の書き込みに失敗しました: ${err.message}（ESPNアプリで手動対応してください）`);
+          }
+        }
+        state.executedActions.push(key);
+      }
+    }
     state.dailyNotices[noticeKey('waiver-tue')] = true;
   }
 
