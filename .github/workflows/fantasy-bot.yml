@@ -4,7 +4,15 @@ on:
   schedule:
     # 30分おき（UTC）。実際に通知/操作が必要かどうかは fantasy/run.js 側で判定する。
     - cron: '*/30 * * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'run=通常の判定を1回実行 / check=セットアップ疎通チェック（Discordへ必ずテスト通知を送る）'
+        type: choice
+        default: run
+        options:
+          - run
+          - check
 
 permissions:
   contents: write
@@ -16,6 +24,15 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    env:
+      ESPN_SWID: ${{ secrets.ESPN_SWID }}
+      ESPN_S2: ${{ secrets.ESPN_S2 }}
+      FANTASY_LEAGUE_ID: ${{ secrets.FANTASY_LEAGUE_ID }}
+      FANTASY_TEAM_ID: ${{ secrets.FANTASY_TEAM_ID }}
+      FANTASY_YEAR: ${{ secrets.FANTASY_YEAR }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DRY_RUN: ${{ secrets.DRY_RUN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,19 +43,18 @@ jobs:
 
       - run: npm ci
 
+      # 疎通確認モード。run.js は通知対象がない日は何も送らないため、
+      # Discord連携が生きているかを確かめるにはこちらを使う。
+      - name: Run setup check
+        if: github.event.inputs.mode == 'check'
+        run: node fantasy/checkSetup.js
+
       - name: Run fantasy bot
+        if: github.event.inputs.mode != 'check'
         run: node fantasy/run.js
-        env:
-          ESPN_SWID: ${{ secrets.ESPN_SWID }}
-          ESPN_S2: ${{ secrets.ESPN_S2 }}
-          FANTASY_LEAGUE_ID: ${{ secrets.FANTASY_LEAGUE_ID }}
-          FANTASY_TEAM_ID: ${{ secrets.FANTASY_TEAM_ID }}
-          FANTASY_YEAR: ${{ secrets.FANTASY_YEAR }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          DRY_RUN: ${{ secrets.DRY_RUN }}
 
       - name: Persist state
+        if: github.event.inputs.mode != 'check'
         run: |
           git config user.name "fantasy-bot"
           git config user.email "actions@users.noreply.github.com"
