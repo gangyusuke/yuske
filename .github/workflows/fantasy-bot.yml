@@ -1,0 +1,47 @@
+name: Fantasy Bot
+
+on:
+  schedule:
+    # 30分おき（UTC）。実際に通知/操作が必要かどうかは fantasy/run.js 側で判定する。
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fantasy-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run fantasy bot
+        run: node fantasy/run.js
+        env:
+          ESPN_SWID: ${{ secrets.ESPN_SWID }}
+          ESPN_S2: ${{ secrets.ESPN_S2 }}
+          FANTASY_LEAGUE_ID: ${{ secrets.FANTASY_LEAGUE_ID }}
+          FANTASY_TEAM_ID: ${{ secrets.FANTASY_TEAM_ID }}
+          FANTASY_YEAR: ${{ secrets.FANTASY_YEAR }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DRY_RUN: ${{ secrets.DRY_RUN }}
+
+      - name: Persist state
+        run: |
+          git config user.name "fantasy-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add fantasy/.state/last-run.json
+          git diff --cached --quiet || git commit -m "chore(fantasy-bot): update state [skip ci]"
+          git push

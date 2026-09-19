@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>スマホ副業AIエージェント</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>📱 スマホ副業AIエージェント</h1>
+      <p class="subtitle">スマホだけで月10万円を目指す副業プランを一緒に考えます</p>
+      <button id="resetBtn" class="reset-btn" title="会話をリセット">リセット</button>
+    </header>
+
+    <main id="chat" class="chat"></main>
+
+    <form id="chatForm" class="chat-form">
+      <textarea
+        id="messageInput"
+        rows="1"
+        placeholder="例: 1日2時間くらいスマホで作業できます。おすすめの副業は？"
+        required
+      ></textarea>
+      <button type="submit" id="sendBtn">送信</button>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
