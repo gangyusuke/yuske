@@ -92,12 +92,34 @@ Discordに通知するだけにしています。数週間分の通知内容が�
    - `ANTHROPIC_API_KEY` — ウェイバー判断エージェントが使うAPIキー（上のスマホ副業
      エージェントと同じキーを共用してよい）
    - `DRY_RUN` — `true`（まずは書き込みなしで動作確認）
+
+   ブラウザのフォームに貼る代わりに、`gh` CLI からでも登録できる。
+   `--body` を付けずに実行すると値を非表示で受け取るので、シェル履歴に残らない。
+   `ESPN_S2` やAPIキーのような機密性の高い値はこちらが安全。
+   ```bash
+   gh auth login                      # 初回のみ
+   gh secret set ESPN_S2              # プロンプトに貼り付ける
+   gh secret set FANTASY_YEAR --body 2026   # 機密でない値は直接指定でよい
+   gh secret list                     # 名前だけ一覧表示（値は出ない）
+   ```
 4. **PRをマージする**
    `.github/workflows/fantasy-bot.yml` はデフォルトブランチにマージされたあと
    スケジュール実行が有効になる（GitHub Actionsの仕様のため、PRの状態では動かない）。
 5. **動作確認**
-   マージ後、GitHub の Actions タブ → "Fantasy Bot" → "Run workflow" で手動実行できる。
-   ローカルで試す場合は `.env` に同じ変数を設定して以下を実行:
+   マージ後、Actions タブ → "Fantasy Bot" → "Run workflow" で手動実行できる。
+   `mode` を選べるので、まず `check` で疎通確認するとよい。
+   ```bash
+   gh workflow run fantasy-bot.yml -f mode=check   # 必ずDiscordにテスト通知を送る
+   gh run watch                                    # 進行を見る
+   gh run view --log-failed                        # 失敗したステップのログだけ見る
+   ```
+   `mode=run` は通常の判定を1回実行する。ただし `fantasy/run.js` は通知対象が
+   ない日（火・水・金・日以外で、かつスワップ/IR対象の選手もいない場合）には
+   Discordへ何も送らず「通知対象なし」で正常終了する。そのため疎通確認の目的では
+   `mode=check` を使うこと。
+
+   ローカルで試したい場合は `.env` に同じ変数を設定して以下を実行する。ただし
+   認証情報が平文でディスクに残るので、上記の `gh` 経由での確認を推奨する。
    ```bash
    npm install
    npm run fantasy:check   # 環境変数・ESPN認証・Discord通知の疎通を一括チェック
