@@ -1,0 +1,26 @@
+name: Focus Reminder
+
+on:
+  schedule:
+    # 土日の朝 8:50 JST（= 金・土の 23:50 UTC）。GitHub の cron は UTC 固定。
+    - cron: '50 23 * * 5,6'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    env:
+      FOCUS_DISCORD_WEBHOOK_URL: ${{ secrets.FOCUS_DISCORD_WEBHOOK_URL }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 外部依存なし（fetch は Node 標準）なので npm ci は不要
+      - run: node focus/remind.js
