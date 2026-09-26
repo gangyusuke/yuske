@@ -117,3 +117,25 @@ Style: Japanese anime / yuru-chara, soft hand-drawn lines, flat cel coloring,
 vivid-leaning colors, very expressive faces, simple backgrounds,
 comic panel transitions, no 3D, no glossy AI look.
 ```
+
+### C. 三面図（1キャラずつ作る → 動画生成の参照画像にする）
+
+`[CHARACTER]` の部分を差し替えて、1人ずつ生成する。
+
+```
+Character turnaround sheet (three-view drawing) of ONE original mascot character:
+front view, side view (profile), and back view, arranged left to right in a single row,
+same size, same pose (standing straight, arms relaxed), full body, evenly spaced.
+Exactly the same design, proportions, colors and details in all three views.
+
+[CHARACTER]
+
+2.5 heads tall chibi proportions, round soft silhouette.
+Style: Japanese anime / yuru-chara style, soft clean hand-drawn lines, flat cel coloring,
+vivid-leaning colors, plain white background, official model sheet for animation.
+Hand-drawn look, consistent line weight, no glossy rendering, no 3D, no shadows on background.
+```
+
+- 共感の子：`A slightly clumsy, relatable girl. Eyes: irises with soft horizontal stripes like layered sunset bands. Signature symbol: a small cloud mark on her forehead. Main color: coral orange. Gentle, slightly embarrassed smile.`
+- 憧れの子：`A cool, calm, confident girl everyone admires. Eyes: sharp almond-shaped eyes with diamond-shaped prism-like pupils. Signature symbol: a lightning-bolt shaped streak in her hair. Main colors: electric blue and violet. Cool, slight smile.`
+- 子ども：`A tiny child who makes you want to protect them. Eyes: huge round eyes with tiny flower-shaped pupils. Signature symbol: a little sprout on top of the head. Main colors: lemon yellow and mint green. Innocent, curious face.`
