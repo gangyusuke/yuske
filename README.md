@@ -128,3 +128,12 @@ Discordに通知するだけにしています。数週間分の通知内容が�
 6. **本番切り替え**
    Discordに届く提案内容（スワップ・IR移動・ウェイバー判断）を数週間チェックし、
    問題なければ Secrets の `DRY_RUN` を `false` に変更する。以降は完全に無人で回る。
+
+## FOCUS.md — 週末の集中リマインド
+
+`FOCUS.md` に「いま何に集中するか」のメモを書いておくと、GitHub Actions
+（`.github/workflows/focus-reminder.yml`）が毎週土日の朝 8:50（JST）に内容を Discord へ送る。
+方針が変わったら `FOCUS.md` を書き換えるだけでよい。
+
+- 送信先: Secret `FOCUS_DISCORD_WEBHOOK_URL`。未設定なら fantasy ボットと同じ `DISCORD_WEBHOOK_URL` に送る
+- 手動テスト: Actions → "Focus Reminder" → "Run workflow"（または `gh workflow run focus-reminder.yml`）
