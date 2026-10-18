@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+</head>
+<body>
+<title>ガチャまとめメーカー</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+/* Layout: 左に設定と商品リスト、右に生成した縦長画像のプレビュー棚。スマホでは縦に積む */
+:root {
+  --bg: #f2f4fa;
+  --surface: #ffffff;
+  --fg: #1b1e3c;
+  --muted: #5d6388;
+  --line: #dce0ee;
+  --accent: #e8352e;
+  --accent-ink: #ffffff;
+  --coin: #ffc629;
+  --soft: #e9ecf7;
+  --display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10122a; --surface: #1a1d3b; --fg: #eceef8; --muted: #a3a8c8;
+    --line: #2d325e; --accent: #ff5a4f; --accent-ink: #ffffff; --coin: #ffd23f; --soft: #232750;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10122a; --surface: #1a1d3b; --fg: #eceef8; --muted: #a3a8c8;
+  --line: #2d325e; --accent: #ff5a4f; --accent-ink: #ffffff; --coin: #ffd23f; --soft: #232750;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 20px; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+header.top h1 { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 5vw, 36px); margin: 0; letter-spacing: .02em; }
+header.top h1 span { color: var(--accent); }
+header.top p { margin: 0; color: var(--muted); min-width: 0; }
+.cols { display: grid; gap: 20px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .cols { grid-template-columns: minmax(0, 430px) minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 13px; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+.stack { display: grid; gap: 20px; min-width: 0; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label, .lbl { font-size: 13px; font-weight: 700; color: var(--muted); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+input[type="text"], input[type="number"] {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0;
+}
+input:focus-visible, button:focus-visible, .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: inline-block; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 700; font-size: 14px; background: var(--bg); }
+.seg input:checked + span { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.swatch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.swatch input { position: absolute; opacity: 0; pointer-events: none; }
+.swatch i { width: 34px; height: 34px; border-radius: 50%; display: block; border: 3px solid transparent; box-shadow: 0 0 0 1px var(--line); }
+.swatch input:checked + i { border-color: var(--fg); }
+.swatch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+.swatch b { font-size: 13px; font-weight: 700; }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+button { font: inherit; cursor: pointer; }
+.btn { border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 900; background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.btn:disabled { opacity: .5; cursor: default; }
+.addbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+.sample-note { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.items { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.item { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.thumb { width: 76px; height: 76px; border-radius: 12px; border: 0; padding: 0; overflow: hidden; background: var(--soft); position: relative; color: var(--muted); font-size: 12px; font-weight: 700; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .rank { position: absolute; left: 4px; top: 4px; background: var(--fg); color: var(--bg); border-radius: 999px; padding: 0 7px; font-size: 11px; font-weight: 900; }
+.item .fields { display: grid; gap: 6px; min-width: 0; }
+.item .fields input { padding: 6px 8px; font-size: 14px; background: var(--surface); }
+.item .mini { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 6px; }
+.item .tools { display: grid; gap: 4px; }
+.icon { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-weight: 900; line-height: 1; }
+.chip { display: inline-block; font-size: 11px; font-weight: 900; padding: 1px 8px; border-radius: 999px; background: var(--coin); color: #1b1e3c; justify-self: start; }
+.shelf-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.page { display: grid; gap: 6px; margin: 0; min-width: 0; }
+.page img { width: 100%; aspect-ratio: 9 / 16; max-width: 100%; border-radius: 12px; display: block; background: var(--soft); box-shadow: 0 1px 0 var(--line); }
+.page figcaption { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.page button { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 900; }
+textarea { width: 100%; min-height: 180px; font: inherit; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; resize: vertical; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .page img { transition: opacity .2s; } }
+.busy .page img { opacity: .6; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>ガチャ<span>まとめ</span>メーカー</h1>
+    <p>写真と商品名を入れるだけで、TikTok用の縦長画像（1080×1920）を自動で作ります。</p>
+  </header>
+
+  <div class="cols">
+    <div class="stack">
+      <section class="panel" aria-labelledby="h-set">
+        <h2 id="h-set">設定</h2>
+        <div class="field">
+          <span class="lbl">種類</span>
+          <div class="seg" role="radiogroup" aria-label="種類">
+            <label><input type="radio" name="mode" id="mode-list" value="list" checked><span>新作まとめ</span></label>
+            <label><input type="radio" name="mode" id="mode-rank" value="rank"><span>ランキング</span></label>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="f-month">発売月</label><input type="text" id="f-month" value="10月"></div>
+          <div class="field"><label for="f-handle">アカウント名</label><input type="text" id="f-handle" value="@your_gacha"></div>
+        </div>
+        <div class="field"><label for="f-title">タイトル</label><input type="text" id="f-title" value="新作ガチャまとめ"></div>
+        <div class="field">
+          <span class="lbl">中のページ</span>
+          <div class="seg" role="radiogroup" aria-label="中のページ">
+            <label><input type="radio" name="layout" id="lay-grid" value="grid" checked><span>4つずつ並べる</span></label>
+            <label><input type="radio" name="layout" id="lay-single" value="single"><span>1商品1枚</span></label>
+          </div>
+        </div>
+        <div class="field" id="rank-order-field" hidden>
+          <span class="lbl">発表の順番</span>
+          <div class="seg" role="radiogroup" aria-label="発表の順番">
+            <label><input type="radio" name="order" id="ord-up" value="up" checked><span>下位から（最後に1位）</span></label>
+            <label><input type="radio" name="order" id="ord-down" value="down"><span>1位から</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl">色</span>
+          <div class="swatches" role="radiogroup" aria-label="色">
+            <label class="swatch"><input type="radio" name="theme" id="th-capsule" value="capsule" checked><i style="background:linear-gradient(135deg,#e8352e 50%,#e9f4ff 50%)"></i><b>カプセル</b></label>
+            <label class="swatch"><input type="radio" name="theme" id="th-night" value="night"><i style="background:linear-gradient(135deg,#ff4f8b 50%,#15172e 50%)"></i><b>ナイト</b></label>
+            <label class="swatch"><input type="radio" name="theme" id="th-mint" value="mint"><i style="background:linear-gradient(135deg,#14a37f 50%,#dff7ee 50%)"></i><b>ミント</b></label>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="f-end" checked>最後に「フォローしてね」の画像を付ける</label>
+      </section>
+
+      <section class="panel" aria-labelledby="h-items">
+        <h2 id="h-items">商品（上から順番に並びます）</h2>
+        <div class="addbar">
+          <label class="btn" for="f-photos" role="button" tabindex="0" id="add-label">写真をまとめて追加</label>
+          <input type="file" id="f-photos" accept="image/*" multiple hidden>
+          <button type="button" class="btn ghost" id="add-empty">写真なしで1件追加</button>
+        </div>
+        <p class="sample-note" id="sample-note">いま入っているのは<b>見本のサンプル</b>です。写真を追加すると自動で消えます。</p>
+        <ul class="items" id="items"></ul>
+        <input type="file" id="f-one" accept="image/*" hidden>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="panel" aria-labelledby="h-out">
+        <div class="shelf-head">
+          <h2 id="h-out">できた画像 <span id="count"></span></h2>
+          <button type="button" class="btn" id="save-zip">まとめて保存（ZIP）</button>
+        </div>
+        <p class="note" id="save-hint">TikTokの「写真」投稿にそのまま並べて使えます。保存できないときは、画像を長押しして保存してください。</p>
+        <div class="shelf" id="shelf"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-cap">
+        <div class="shelf-head">
+          <h2 id="h-cap">キャプション案</h2>
+          <button type="button" class="btn ghost" id="copy-cap">コピー</button>
+        </div>
+        <textarea id="caption" aria-label="キャプション案"></textarea>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(() => {
+  const W = 1080, H = 1920;
+  const DISPLAY = '"Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif';
+  const BODY = '"Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif';
+  const THEMES = {
+    capsule: { bg: '#e9f4ff', dotA: '#e8352e', dotB: '#ffc629', primary: '#e8352e', onPrimary: '#ffffff', ink: '#1b1e3c', muted: '#5d6388', card: '#ffffff', cardInk: '#1b1e3c', coin: '#ffc629', coinRim: '#d99a00', coinInk: '#3b2a00' },
+    night:   { bg: '#15172e', dotA: '#ff4f8b', dotB: '#ffd23f', primary: '#ff4f8b', onPrimary: '#ffffff', ink: '#ffffff', muted: '#b4b8d8', card: '#23264a', cardInk: '#ffffff', coin: '#ffd23f', coinRim: '#c99a00', coinInk: '#3b2a00' },
+    mint:    { bg: '#dff7ee', dotA: '#14a37f', dotB: '#ff8a3d', primary: '#14a37f', onPrimary: '#ffffff', ink: '#12302a', muted: '#4c6b63', card: '#ffffff', cardInk: '#12302a', coin: '#ffc629', coinRim: '#d99a00', coinInk: '#3b2a00' },
+  };
+  const MEDAL = ['#f5b400', '#aeb7c4', '#cd7f45'];
+  const DEFAULT_TITLE = { list: '新作ガチャまとめ', rank: '神ガチャランキング' };
+  const STORE_KEY = 'gachaMaker.v1';
+
+  const $ = (id) => document.getElementById(id);
+  let uid = 0;
+  const state = {
+    mode: 'list', layout: 'grid', order: 'up', theme: 'capsule',
+    month: '10月', handle: '@your_gacha', title: DEFAULT_TITLE.list, end: true,
+    items: [],
+  };
+
+  // ---------- 保存されている設定（写真は保存しない） ----------
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (saved) for (const k of ['mode', 'layout', 'order', 'theme', 'month', 'handle', 'title', 'end']) if (k in saved) state[k] = saved[k];
+  } catch (e) { /* 保存できない環境でも動く */ }
+  function persist() {
+    try {
+      const { items, ...rest } = state;
+      localStorage.setItem(STORE_KEY, JSON.stringify(rest));
+    } catch (e) { /* noop */ }
+  }
+
+  // ---------- 描画の小道具 ----------
+  function rr(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function drawCover(ctx, img, x, y, w, h) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const s = Math.max(w / iw, h / ih);
+    const sw = w / s, sh = h / s;
+    ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, w, h);
+  }
+  function fitFont(ctx, text, family, weight, maxW, start, min) {
+    let size = start;
+    for (; size > min; size -= 2) {
+      ctx.font = `${weight} ${size}px ${family}`;
+      if (ctx.measureText(text).width <= maxW) break;
+    }
+    ctx.font = `${weight} ${size}px ${family}`;
+    return size;
+  }
+  const NO_START = 'ー、。，．）」』】！？…ぁぃぅぇぉゃゅょっァィゥェォャュョッ';
+  // 日本語は1文字単位で折り返す
+  function wrap(ctx, text, maxW, maxLines) {
+    const chars = Array.from(text || '');
+    const lines = [];
+    let line = '', i = 0;
+    for (; i < chars.length; i++) {
+      const t = line + chars[i];
+      if (ctx.measureText(t).width > maxW && line) {
+        // 「ー」「。」などが行頭に来ないよう、前の1文字ごと次の行へ送る
+        let carry = '';
+        if (NO_START.includes(chars[i]) && line.length > 1) { carry = line.slice(-1); line = line.slice(0, -1); }
+        lines.push(line);
+        line = carry + chars[i];
+        if (lines.length === maxLines) { line = ''; break; }
+      } else line = t;
+    }
+    if (line && lines.length < maxLines) { lines.push(line); i = chars.length; }
+    if (i < chars.length && lines.length) {
+      let last = lines[lines.length - 1];
+      while (last && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+      lines[lines.length - 1] = last + '…';
+    }
+    return lines;
+  }
+  function seeded(seed) {
+    let s = seed * 9301 + 49297;
+    return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  }
+  function drawCapsule(ctx, cx, cy, r, top, bottom, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0); ctx.closePath(); ctx.fillStyle = top; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI); ctx.closePath(); ctx.fillStyle = bottom; ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(cx - r, cy - r * 0.04, r * 2, r * 0.08);
+    ctx.beginPath(); ctx.ellipse(cx - r * 0.38, cy - r * 0.5, r * 0.22, r * 0.12, -0.6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill();
+    ctx.restore();
+  }
+  function background(ctx, t, seed) {
+    ctx.fillStyle = t.bg; ctx.fillRect(0, 0, W, H);
+    const rnd = seeded(seed);
+    for (let i = 0; i < 16; i++) {
+      const r = 26 + rnd() * 46;
+      drawCapsule(ctx, rnd() * W, rnd() * H, r, i % 2 ? t.dotA : t.dotB, t.card, 0.14);
+    }
+  }
+  function pill(ctx, x, y, text, font, bg, fg, padX = 26, h = 64) {
+    ctx.font = font;
+    const w = ctx.measureText(text).width + padX * 2;
+    rr(ctx, x, y, w, h, h / 2); ctx.fillStyle = bg; ctx.fill();
+    ctx.fillStyle = fg; ctx.textBaseline = 'middle'; ctx.fillText(text, x + padX, y + h / 2 + 2);
+    ctx.textBaseline = 'alphabetic';
+    return w;
+  }
+  function priceDigits(p) { return String(p ?? '').replace(/[^\d]/g, ''); }
+  function coin(ctx, cx, cy, r, price, t) {
+    const d = priceDigits(price);
+    if (!d) return;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = r * 0.25; ctx.shadowOffsetY = r * 0.08;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fillStyle = t.coin; ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.84, 0, Math.PI * 2); ctx.lineWidth = r * 0.06; ctx.strokeStyle = t.coinRim; ctx.stroke();
+    ctx.fillStyle = t.coinInk; ctx.textAlign = 'center';
+    fitFont(ctx, d, DISPLAY, 400, r * 1.35, r * 0.7, 10);
+    ctx.fillText(d, cx, cy + r * 0.16);
+    ctx.font = `900 ${Math.round(r * 0.3)}px ${BODY}`;
+    ctx.fillText('円', cx, cy + r * 0.55);
+    ctx.textAlign = 'left';
+  }
+  function photoOrPlaceholder(ctx, item, x, y, w, h, r, t) {
+    ctx.save();
+    rr(ctx, x, y, w, h, r); ctx.clip();
+    if (item && item.img) drawCover(ctx, item.img, x, y, w, h);
+    else {
+      ctx.fillStyle = t.bg; ctx.fillRect(x, y, w, h);
+      drawCapsule(ctx, x + w / 2, y + h / 2 - h * 0.06, Math.min(w, h) * 0.22, t.primary, t.card);
+      ctx.fillStyle = t.muted; ctx.textAlign = 'center';
+      ctx.font = `700 ${Math.round(Math.min(w, h) * 0.07)}px ${BODY}`;
+      ctx.fillText('写真なし', x + w / 2, y + h / 2 + Math.min(w, h) * 0.28);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+  }
+  function crown(ctx, x, y, s, color) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.8);
+    ctx.lineTo(x, y + s * 0.25);
+    ctx.lineTo(x + s * 0.28, y + s * 0.5);
+    ctx.lineTo(x + s * 0.5, y);
+    ctx.lineTo(x + s * 0.72, y + s * 0.5);
+    ctx.lineTo(x + s, y + s * 0.25);
+    ctx.lineTo(x + s, y + s * 0.8);
+    ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+  }
+  function header(ctx, t, label, indicator) {
+    pill(ctx, 56, 150, label, `900 36px ${BODY}`, t.primary, t.onPrimary);
+    if (indicator) {
+      ctx.font = `400 44px ${DISPLAY}`; ctx.fillStyle = t.muted; ctx.textAlign = 'right';
+      ctx.fillText(indicator, W - 130, 198); ctx.textAlign = 'left';
+    }
+  }
+
+  // ---------- ページの種類 ----------
+  function mosaic(ctx, items, t, y0, blur) {
+    const shown = items.slice(0, 6);
+    const cols = 3, gap = 24, tw = (888 - gap * 2) / cols, th = 300;
+    const n = Math.max(shown.length, 1);
+    const rows = Math.ceil(n / cols);
+    for (let i = 0; i < n; i++) {
+      const c = i % cols, r = Math.floor(i / cols);
+      const inRow = Math.min(cols, n - r * cols);
+      const offset = (888 - (inRow * tw + (inRow - 1) * gap)) / 2;
+      const x = 56 + offset + c * (tw + gap), y = y0 + r * (th + gap + 20) + (rows === 1 ? 140 : 0);
+      ctx.save();
+      ctx.translate(x + tw / 2, y + th / 2);
+      ctx.rotate((i % 2 ? 1 : -1) * 0.04);
+      ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+      rr(ctx, -tw / 2 - 12, -th / 2 - 12, tw + 24, th + 24, 22); ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.shadowColor = 'transparent';
+      if (blur) ctx.filter = 'blur(22px)';
+      photoOrPlaceholder(ctx, shown[i], -tw / 2, -th / 2, tw, th, 14, t);
+      ctx.filter = 'none';
+      if (blur) {
+        rr(ctx, -tw / 2, -th / 2, tw, th, 14); ctx.fillStyle = 'rgba(27,30,60,.35)'; ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.font = `400 150px ${DISPLAY}`;
+        ctx.fillText('?', 0, 52); ctx.textAlign = 'left';
+      }
+      ctx.restore();
+    }
+  }
+  function drawCoverList(ctx, t) {
+    background(ctx, t, 3);
+    pill(ctx, 56, 150, 'NEW CAPSULE TOYS', `900 34px ${BODY}`, t.primary, t.onPrimary);
+    const month = state.month || '';
+    const ms = fitFont(ctx, month, DISPLAY, 400, 640, 250, 80);
+    ctx.fillStyle = t.primary; ctx.fillText(month, 50, 480);
+    const mw = ctx.measureText(month).width;
+    ctx.font = `400 ${Math.round(ms * 0.46)}px ${DISPLAY}`; ctx.fillStyle = t.ink;
+    ctx.fillText('発売', 50 + mw + 16, 480);
+    fitFont(ctx, state.title || '', DISPLAY, 400, 900, 120, 50);
+    ctx.fillStyle = t.ink; ctx.fillText(state.title || '', 56, 640);
+    ctx.font = `700 46px ${BODY}`; ctx.fillStyle = t.muted;
+    ctx.fillText(`全${state.items.length}種をまとめてチェック`, 58, 722);
+    mosaic(ctx, state.items, t, 810, false);
+    ctx.font = `700 40px ${BODY}`; ctx.fillStyle = t.muted; ctx.fillText(state.handle || '', 58, 1530);
+  }
+  function drawCoverRank(ctx, t) {
+    background(ctx, t, 5);
+    pill(ctx, 56, 150, 'RANKING', `900 34px ${BODY}`, t.primary, t.onPrimary);
+    ctx.font = `400 110px ${DISPLAY}`; ctx.fillStyle = t.ink;
+    ctx.fillText(`${state.month || ''}の`, 52, 380);
+    fitFont(ctx, state.title || '', DISPLAY, 400, 920, 150, 50);
+    ctx.fillStyle = t.primary; ctx.fillText(state.title || '', 52, 560);
+    const n = state.items.length;
+    pill(ctx, 56, 610, `TOP${n}`, `400 90px ${DISPLAY}`, t.coin, t.coinInk, 40, 130);
+    mosaic(ctx, state.items, t, 820, true);
+    ctx.font = `700 40px ${BODY}`; ctx.fillStyle = t.muted; ctx.fillText(state.handle || '', 58, 1530);
+  }
+  function drawGrid(ctx, t, entries, pageNo, pages) {
+    background(ctx, t, 10 + pageNo);
+    header(ctx, t, state.mode === 'rank' ? 'RANKING' : `${state.month}発売`, `${pageNo} / ${pages}`);
+    fitFont(ctx, state.title || '', DISPLAY, 400, 880, 64, 36);
+    ctx.fillStyle = t.ink; ctx.fillText(state.title || '', 56, 300);
+    const gx = 56, gy = 350, gw = 944, gh = 1190, gap = 28;
+    const cw = (gw - gap) / 2, ch = (gh - gap) / 2;
+    entries.forEach(({ it, i }, k) => {
+      const x = gx + (k % 2) * (cw + gap), y = gy + Math.floor(k / 2) * (ch + gap);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.12)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
+      rr(ctx, x, y, cw, ch, 34); ctx.fillStyle = t.card; ctx.fill();
+      ctx.restore();
+      const px = x + 16, py = y + 16, pw = cw - 32, ph = ch - 32 - 128;
+      photoOrPlaceholder(ctx, it, px, py, pw, ph, 24, t);
+      if (state.mode === 'rank') {
+        const r = i + 1;
+        pill(ctx, px + 12, py + 12, `${r}位`, `400 40px ${DISPLAY}`, MEDAL[r - 1] || t.primary, '#ffffff', 20, 62);
+      } else if (it.date) {
+        pill(ctx, px + 12, py + ph - 58, it.date, `900 26px ${BODY}`, 'rgba(20,22,44,.72)', '#ffffff', 16, 46);
+      }
+      coin(ctx, px + pw - 52, py + 52, 58, it.price, t);
+      ctx.font = `900 36px ${BODY}`; ctx.fillStyle = t.cardInk;
+      const lines = wrap(ctx, it.name || '（商品名）', pw, 2);
+      lines.forEach((l, i) => ctx.fillText(l, px + 2, py + ph + 50 + i * 44));
+      if (it.maker && lines.length < 2) {
+        ctx.font = `700 28px ${BODY}`; ctx.fillStyle = t.muted;
+        ctx.fillText(wrap(ctx, it.maker, pw, 1)[0] || '', px + 2, py + ph + 96);
+      }
+    });
+  }
+  function drawSingle(ctx, t, it, index, pageNo, pages) {
+    background(ctx, t, 30 + index);
+    const rank = index + 1;
+    header(ctx, t, state.mode === 'rank' ? `${state.month}の${state.title}` : `${state.month}発売`, `${String(pageNo).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`);
+    const cx = 56, cy = 250, cw = 888, chh = 1290;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.14)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+    rr(ctx, cx, cy, cw, chh, 48); ctx.fillStyle = t.card; ctx.fill();
+    ctx.restore();
+    const px = cx + 22, py = cy + 22, pw = cw - 44, ph = 860;
+    photoOrPlaceholder(ctx, it, px, py, pw, ph, 32, t);
+    if (state.mode === 'rank') {
+      const color = MEDAL[rank - 1] || t.primary;
+      ctx.font = `400 84px ${DISPLAY}`;
+      const label = `第${rank}位`;
+      const extra = rank === 1 ? 84 : 0;
+      const w = ctx.measureText(label).width + 64 + extra;
+      rr(ctx, px + 20, py + 20, w, 130, 65); ctx.fillStyle = color; ctx.fill();
+      if (rank === 1) crown(ctx, px + 52, py + 50, 70, '#ffffff');
+      ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, px + 52 + extra, py + 90); ctx.textBaseline = 'alphabetic';
+    }
+    coin(ctx, px + pw - 90, py + ph - 70, 100, it.price, t);
+    ctx.font = `900 66px ${BODY}`; ctx.fillStyle = t.cardInk;
+    const lines = wrap(ctx, it.name || '（商品名）', pw - 10, 2);
+    lines.forEach((l, i) => ctx.fillText(l, px + 4, py + ph + 96 + i * 82));
+    const meta = [it.maker, it.date].filter(Boolean).join('　|　');
+    if (meta) {
+      ctx.font = `700 40px ${BODY}`; ctx.fillStyle = t.muted;
+      ctx.fillText(wrap(ctx, meta, pw - 10, 1)[0] || '', px + 4, py + ph + 96 + lines.length * 82 + 24);
+    }
+  }
+  function nextMonth(m) {
+    const n = parseInt(String(m).replace(/[^\d]/g, ''), 10);
+    return n >= 1 && n <= 12 ? `${n % 12 + 1}月` : '来月';
+  }
+  function drawEnd(ctx, t) {
+    background(ctx, t, 99);
+    drawCapsule(ctx, W / 2, 470, 230, t.primary, t.card);
+    ctx.textAlign = 'center';
+    ctx.font = `900 60px ${BODY}`; ctx.fillStyle = t.ink;
+    ctx.fillText(state.mode === 'rank' ? '毎月のガチャランキング' : '毎月の新作ガチャ', W / 2, 860);
+    fitFont(ctx, 'まとめてお届け', DISPLAY, 400, 900, 130, 60);
+    ctx.fillStyle = t.primary; ctx.fillText('まとめてお届け', W / 2, 1010);
+    ctx.font = `900 54px ${BODY}`;
+    const label = 'フォローして見逃さない';
+    const bw = ctx.measureText(label).width + 120;
+    rr(ctx, (W - bw) / 2, 1080, bw, 130, 65); ctx.fillStyle = t.primary; ctx.fill();
+    ctx.fillStyle = t.onPrimary; ctx.textBaseline = 'middle'; ctx.fillText(label, W / 2, 1147); ctx.textBaseline = 'alphabetic';
+    fitFont(ctx, state.handle || '', DISPLAY, 400, 900, 70, 30);
+    ctx.fillStyle = t.ink; ctx.fillText(state.handle || '', W / 2, 1330);
+    ctx.font = `700 42px ${BODY}`; ctx.fillStyle = t.muted;
+    ctx.fillText(`次回は ${nextMonth(state.month)}発売分`, W / 2, 1420);
+    ctx.textAlign = 'left';
+  }
+
+  // ---------- ページ構成 ----------
+  function plan() {
+    const pages = [];
+    const items = state.items;
+    const ranked = items.map((it, i) => ({ it, i }));
+    const seq = state.mode === 'rank' && state.order === 'up' ? ranked.slice().reverse() : ranked;
+    pages.push({ label: '表紙', draw: (c, t) => (state.mode === 'rank' ? drawCoverRank : drawCoverList)(c, t) });
+    if (state.layout === 'grid') {
+      const chunks = [];
+      for (let k = 0; k < seq.length; k += 4) chunks.push(seq.slice(k, k + 4));
+      chunks.forEach((chunk, ci) => {
+        const ends = [chunk[0].i + 1, chunk[chunk.length - 1].i + 1].sort((x, y) => x - y);
+        const label = state.mode === 'rank' ? `${ends[0]}〜${ends[1]}位` : `一覧 ${ci + 1}`;
+        pages.push({ label, draw: (c, t) => drawGrid(c, t, chunk, ci + 1, chunks.length) });
+      });
+    } else {
+      seq.forEach(({ it, i }, k) => {
+        pages.push({ label: state.mode === 'rank' ? `${i + 1}位` : `${k + 1}. ${it.name || '商品'}`, draw: (c, t) => drawSingle(c, t, it, i, k + 1, seq.length) });
+      });
+    }
+    if (state.end) pages.push({ label: 'フォロー誘導', draw: drawEnd });
+    return pages;
+  }
+  // ---------- 生成 ----------
+  let renderToken = 0;
+  let pageBlobs = [];
+  let objectUrls = [];
+  const shelf = $('shelf');
+  async function render() {
+    const my = ++renderToken;
+    document.body.classList.add('busy');
+    const t = THEMES[state.theme] || THEMES.capsule;
+    await loadGlyphs();
+    if (my !== renderToken) return;
+    const pages = plan();
+    const blobs = [];
+    for (const p of pages) {
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      const ctx = cv.getContext('2d');
+      p.draw(ctx, t);
+      const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+      if (my !== renderToken) return;
+      blobs.push({ label: p.label, blob });
+    }
+    objectUrls.forEach((u) => URL.revokeObjectURL(u));
+    objectUrls = [];
+    pageBlobs = blobs;
+    shelf.textContent = '';
+    blobs.forEach((b, i) => {
+      const url = URL.createObjectURL(b.blob);
+      objectUrls.push(url);
+      const fig = document.createElement('figure'); fig.className = 'page';
+      const img = document.createElement('img'); img.src = url; img.alt = `${i + 1}枚目: ${b.label}`;
+      const cap = document.createElement('figcaption');
+      const s = document.createElement('span'); s.textContent = `${i + 1}. ${b.label}`;
+      const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '保存';
+      btn.addEventListener('click', () => saveFile(fileName(i, b.label), b.blob));
+      cap.append(s, btn); fig.append(img, cap); shelf.append(fig);
+    });
+    $('count').textContent = `（${blobs.length}枚）`;
+    document.body.classList.remove('busy');
+    $('caption').value = caption();
+  }
+  // Google Fontsは文字ごとに分けて配信されるので、描く文字を先に読み込んでおく
+  const FIXED_TEXT = 'NEW CAPSULE TOYS RANKING TOP0123456789/|位第の発売全種をまとめてチェック一覧円写真なし毎月新作ガチャランキングお届けフォローして見逃さない次回は来月分（商品名）…?@_';
+  function loadGlyphs() {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    const text = FIXED_TEXT + [state.month, state.title, state.handle, nextMonth(state.month)]
+      .concat(...state.items.map((it) => [it.name, it.maker, it.date, it.price])).join('');
+    const uniq = Array.from(new Set(Array.from(text))).join('');
+    return Promise.race([
+      Promise.all([
+        document.fonts.load(`400 80px "Dela Gothic One"`, uniq),
+        document.fonts.load(`700 40px "Zen Maru Gothic"`, uniq),
+        document.fonts.load(`900 40px "Zen Maru Gothic"`, uniq),
+      ]),
+      new Promise((r) => setTimeout(r, 3000)),
+    ]).catch(() => {});
+  }
+  let timer = 0;
+  function schedule() { clearTimeout(timer); timer = setTimeout(render, 200); persist(); }
+  function fileName(i, label) {
+    const base = state.mode === 'rank' ? 'gacha-ranking' : 'gacha-new';
+    return `${base}-${String(i + 1).padStart(2, '0')}.png`;
+  }
+
+  // ---------- 保存 ----------
+  let downloadsP = null;
+  function getDownloads() {
+    if (!downloadsP) downloadsP = (window.claude && typeof window.claude.use === 'function')
+      ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+    return downloadsP;
+  }
+  async function saveFile(name, blob) {
+    const dl = await getDownloads();
+    if (dl) {
+      try { await dl.save({ filename: name, data: blob }); toast('保存しました'); }
+      catch (e) {
+        if (e && e.code === 'declined') return;
+        if (e && e.code === 'rate_limited') toast('少し待ってからもう一度押してください');
+        else toast('ここでは保存できません。画像を長押しして保存してください');
+      }
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  $('save-zip').addEventListener('click', async () => {
+    if (!window.JSZip) { toast('ZIPを作れませんでした。1枚ずつ保存してください'); return; }
+    const btn = $('save-zip'); btn.disabled = true;
+    try {
+      const zip = new JSZip();
+      pageBlobs.forEach((b, i) => zip.file(fileName(i, b.label), b.blob));
+      const out = await zip.generateAsync({ type: 'blob' });
+      await saveFile(state.mode === 'rank' ? 'gacha-ranking.zip' : 'gacha-new.zip', out);
+    } finally { btn.disabled = false; }
+  });
+
+  // ---------- キャプション ----------
+  function caption() {
+    const nums = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+    const m = state.month || '';
+    const price = (it) => (priceDigits(it.price) ? `（${priceDigits(it.price)}円）` : '');
+    if (state.mode === 'rank') {
+      const lines = state.items.map((it, i) => `${i + 1}位 ${it.name || '商品'}${price(it)}`);
+      return `【${m}】${state.title} TOP${state.items.length}\n\n${lines.join('\n')}\n\nあなたの1位はどれ？コメントで教えてね\n\n#ガチャガチャ #ガチャ #カプセルトイ #ガチャランキング #${m.replace(/\s/g, '')}発売`;
+    }
+    const lines = state.items.map((it, i) => `${nums[i] || `${i + 1}.`} ${it.name || '商品'}${price(it)}`);
+    return `【${m}発売】${state.title}\n\n${lines.join('\n')}\n\n気になるのはどれ？保存して回しに行こう\n\n#ガチャガチャ #ガチャ #カプセルトイ #新作ガチャ #${m.replace(/\s/g, '')}発売`;
+  }
+  $('copy-cap').addEventListener('click', () => {
+    const ta = $('caption');
+    const done = () => toast('コピーしました');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(done, () => { ta.select(); toast('選択しました。コピーしてください'); });
+    } else { ta.select(); toast('選択しました。コピーしてください'); }
+  });
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const el = $('toast'); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2400);
+  }
+
+  // ---------- 商品リスト ----------
+  const list = $('items');
+  function renderItems() {
+    list.textContent = '';
+    $('sample-note').hidden = !state.items.some((it) => it.sample);
+    state.items.forEach((it, idx) => {
+      const li = document.createElement('li'); li.className = 'item';
+      const th = document.createElement('button'); th.type = 'button'; th.className = 'thumb';
+      th.setAttribute('aria-label', `${idx + 1}番目の写真を変える`);
+      if (it.img) { const im = document.createElement('img'); im.src = it.img.src; im.alt = ''; th.append(im); }
+      else th.textContent = '写真を選ぶ';
+      if (state.mode === 'rank') { const rk = document.createElement('span'); rk.className = 'rank'; rk.textContent = `${idx + 1}位`; th.append(rk); }
+      th.addEventListener('click', () => { pickFor = it.id; $('f-one').click(); });
+
+      const f = document.createElement('div'); f.className = 'fields';
+      if (it.sample) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = 'サンプル'; f.append(c); }
+      const mk = (key, ph, type = 'text') => {
+        const inp = document.createElement('input'); inp.type = type; inp.placeholder = ph; inp.value = it[key] || '';
+        inp.id = `${key}-${it.id}`; inp.setAttribute('aria-label', ph);
+        if (type === 'number') inp.inputMode = 'numeric';
+        inp.addEventListener('input', () => { it[key] = inp.value; schedule(); });
+        return inp;
+      };
+      const mini = document.createElement('div'); mini.className = 'mini';
+      mini.append(mk('price', '価格', 'number'), mk('maker', 'メーカー'), mk('date', '発売日'));
+      f.append(mk('name', '商品名'), mini);
+
+      const tools = document.createElement('div'); tools.className = 'tools';
+      const b = (txt, label, fn, dis) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'icon'; x.textContent = txt; x.setAttribute('aria-label', label); x.disabled = !!dis; x.addEventListener('click', fn); return x; };
+      tools.append(
+        b('↑', '上へ', () => move(idx, -1), idx === 0),
+        b('↓', '下へ', () => move(idx, 1), idx === state.items.length - 1),
+        b('×', '削除', () => { state.items.splice(idx, 1); renderItems(); schedule(); }),
+      );
+      li.append(th, f, tools); list.append(li);
+    });
+  }
+  function move(i, d) {
+    const j = i + d; if (j < 0 || j >= state.items.length) return;
+    [state.items[i], state.items[j]] = [state.items[j], state.items[i]];
+    renderItems(); schedule();
+  }
+  function loadImage(file) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img); img.onerror = rej;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  function dropSamples() { state.items = state.items.filter((it) => !it.sample); }
+  $('f-photos').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    dropSamples();
+    for (const file of files) {
+      try {
+        const img = await loadImage(file);
+        state.items.push({ id: ++uid, img, name: file.name.replace(/\.[^.]+$/, ''), price: '', maker: '', date: '' });
+      } catch (err) { toast(`${file.name} を読み込めませんでした`); }
+    }
+    e.target.value = '';
+    renderItems(); schedule();
+  });
+  $('add-label').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('f-photos').click(); } });
+  let pickFor = null;
+  $('f-one').addEventListener('change', async (e) => {
+    const file = (e.target.files || [])[0]; e.target.value = '';
+    const it = state.items.find((x) => x.id === pickFor);
+    if (!file || !it) return;
+    try { it.img = await loadImage(file); it.sample = false; renderItems(); schedule(); }
+    catch (err) { toast('写真を読み込めませんでした'); }
+  });
+  $('add-empty').addEventListener('click', () => {
+    dropSamples();
+    state.items.push({ id: ++uid, img: null, name: '', price: '', maker: '', date: '' });
+    renderItems(); schedule();
+  });
+
+  // ---------- 設定の入力 ----------
+  function bindRadio(name, key, after) {
+    document.querySelectorAll(`input[name="${name}"]`).forEach((r) => {
+      r.checked = r.value === state[key];
+      r.addEventListener('change', () => { if (r.checked) { state[key] = r.value; if (after) after(); schedule(); } });
+    });
+  }
+  bindRadio('mode', 'mode', () => {
+    const other = state.mode === 'rank' ? DEFAULT_TITLE.list : DEFAULT_TITLE.rank;
+    if (!state.title || state.title === other) { state.title = DEFAULT_TITLE[state.mode]; $('f-title').value = state.title; }
+    $('rank-order-field').hidden = state.mode !== 'rank';
+    renderItems();
+  });
+  bindRadio('layout', 'layout');
+  bindRadio('order', 'order');
+  bindRadio('theme', 'theme');
+  $('rank-order-field').hidden = state.mode !== 'rank';
+  for (const [id, key] of [['f-month', 'month'], ['f-handle', 'handle'], ['f-title', 'title']]) {
+    const el = $(id); el.value = state[key];
+    el.addEventListener('input', () => { state[key] = el.value; schedule(); });
+  }
+  const endBox = $('f-end'); endBox.checked = state.end;
+  endBox.addEventListener('change', () => { state.end = endBox.checked; schedule(); });
+
+  // ---------- 見本のサンプル ----------
+  function sampleImage(top, bottom, bg, seed) {
+    const c = document.createElement('canvas'); c.width = 800; c.height = 800;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 800, 800); g.addColorStop(0, bg[0]); g.addColorStop(1, bg[1]);
+    x.fillStyle = g; x.fillRect(0, 0, 800, 800);
+    const rnd = seeded(seed);
+    for (let i = 0; i < 7; i++) drawCapsule(x, rnd() * 800, rnd() * 800, 30 + rnd() * 30, top, '#ffffff', 0.35);
+    x.save(); x.shadowColor = 'rgba(0,0,0,.25)'; x.shadowBlur = 40; x.shadowOffsetY = 20;
+    drawCapsule(x, 400, 410, 230, top, bottom); x.restore();
+    x.font = `900 46px ${BODY}`; x.fillStyle = 'rgba(0,0,0,.45)'; x.textAlign = 'center';
+    x.fillText('SAMPLE', 400, 740);
+    const img = new Image(); img.src = c.toDataURL('image/png');
+    return img;
+  }
+  const SAMPLES = [
+    ['ころころどうぶつ寝そべりマスコット', 300, '#ff7aa2', '#fff1f5', ['#ffe0ea', '#ffc4d6'], '10月第1週'],
+    ['ミニチュア喫茶ナポリタン', 400, '#ff8a3d', '#fff4e8', ['#ffe9d6', '#ffd2ad'], '10月第1週'],
+    ['ちいさな文房具店', 300, '#3d7bff', '#eef3ff', ['#dfe8ff', '#bfd2ff'], '10月第2週'],
+    ['レトロ自販機キーホルダー', 500, '#e8352e', '#ffffff', ['#ffe1df', '#ffc2bd'], '10月第2週'],
+    ['ねこのおにぎり屋さん', 300, '#14a37f', '#effaf6', ['#d9f5ea', '#b5ead6'], '10月第3週'],
+    ['宇宙食ミニチュアコレクション', 400, '#7a5cff', '#f3f0ff', ['#e6e0ff', '#cfc4ff'], '10月第4週'],
+  ];
+  state.items = SAMPLES.map(([name, price, top, bottom, bg, date], i) => ({
+    id: ++uid, img: sampleImage(top, bottom, bg, i + 1), name, price: String(price), maker: 'メーカー名', date, sample: true,
+  }));
+
+  // フォントを読み込んでから描く（読み込めなくても代わりの字体で描く）
+  renderItems();
+  Promise.all(state.items.map((it) => (it.img.decode ? it.img.decode().catch(() => {}) : null))).then(render);
+  getDownloads();
+})();
+</script>
+</body>
+</html>
