@@ -115,7 +115,42 @@ async function main() {
     }
   }
 
-  // --- 3. 曜日ごとの定期リマインド（1日1回まで） ---
+  // --- 3. 先発のバイウィーク／怪我ステータスをアラート（選手・週・状態ごとに1回） ---
+  const swappedOutIds = new Set(swapPlans.map((p) => p.outPlayer.id));
+  const lineupAlerts = rules.planLineupAlerts({
+    roster: { entries: rosterEntries },
+    kickoffMap,
+    proTeamMap: espn.PRO_TEAM_MAP,
+  });
+
+  for (const alert of lineupAlerts) {
+    if (alert.type === 'bye') {
+      const key = `alert-bye-${week}-${alert.player.id}`;
+      if (state.executedActions.includes(key)) continue;
+      messages.push(
+        `🛌 **[バイウィーク疑い]** ${alert.player.name} は今週の対戦表に見つかりません。先発のままだと0点になる可能性があります（略称の不一致の可能性もあるので、心配なら一度ESPN側でも確認してください）。`
+      );
+      state.executedActions.push(key);
+      continue;
+    }
+
+    // OUT/IR/Suspended で、かつ今回スワップ済みの選手は [ラインナップ] 通知と重複するので飛ばす
+    if (rules.LOCKOUT_STATUSES.has(alert.player.status) && swappedOutIds.has(alert.player.id)) continue;
+
+    const key = `alert-injury-${week}-${alert.player.id}-${alert.player.status}`;
+    if (state.executedActions.includes(key)) continue;
+
+    const severe = rules.LOCKOUT_STATUSES.has(alert.player.status);
+    messages.push(
+      `🚑 **[${severe ? '要対応' : '出場注意'}]** ${alert.player.name} が先発枠のまま status=${alert.player.status} です。` +
+      (severe
+        ? '交代できるベンチ選手が見つかりませんでした。FAからの補強を検討してください。'
+        : '金曜に正式ステータスが確定します。出場できなさそうならベンチと入れ替えてください。')
+    );
+    state.executedActions.push(key);
+  }
+
+  // --- 4. 曜日ごとの定期リマインド（1日1回まで） ---
   const noticeKey = (type) => `${todayKey}:${type}`;
 
   if (weekday === 2 && !state.dailyNotices[noticeKey('waiver-tue')]) {
@@ -203,7 +238,7 @@ async function main() {
     state.dailyNotices[noticeKey('final-sun')] = true;
   }
 
-  // --- 4. 通知送信 ---
+  // --- 5. 通知送信 ---
   if (messages.length > 0) {
     const header = `**Gladiators 運用ボット** — Week ${week}${DRY_RUN ? ' [DRY RUN]' : ''}\n`;
     await sendDiscord(WEBHOOK, header + messages.join('\n\n'));
