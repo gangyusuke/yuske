@@ -11,6 +11,8 @@ const STARTER_SLOTS = new Set([SLOT.QB, SLOT.RB, SLOT.WR, SLOT.TE, SLOT.DST, SLO
 const LOCKOUT_STATUSES = new Set(['OUT', 'INJURY_RESERVE', 'SUSPENSION']);
 // IR枠に移してよいステータス（QuestionableはNG＝ダッシュボードの原則どおり）。
 const IR_ELIGIBLE_STATUSES = new Set(['OUT', 'INJURY_RESERVE', 'SUSPENSION']);
+// 先発に置いたままだと危険な「要注意」ステータス（LOCKOUT_STATUSES込み）。
+const WATCH_INJURY_STATUSES = new Set(['QUESTIONABLE', 'DOUBTFUL', 'OUT', 'INJURY_RESERVE', 'SUSPENSION']);
 
 function projectedPoints(player, week) {
   const stat = (player.stats || []).find(
@@ -115,6 +117,35 @@ function planIRMoves({ roster, settings }) {
 }
 
 /**
+ * 先発の中で「対戦表に試合が見つからない（バイウィークの疑い）」選手と
+ * 「怪我系ステータス（Questionable以上）」の選手を検出する。
+ * 書き込みは一切行わない、気づいてもらうためだけの通知専用チェック。
+ */
+function planLineupAlerts({ roster, kickoffMap, proTeamMap }) {
+  const entries = roster.entries || [];
+  const starters = entries.filter((e) => STARTER_SLOTS.has(e.lineupSlotId));
+  const alerts = [];
+
+  for (const e of starters) {
+    const player = e.playerPoolEntry.player;
+
+    if (!kickoffFor(e, kickoffMap, proTeamMap)) {
+      alerts.push({ type: 'bye', slotId: e.lineupSlotId, player: { id: player.id, name: player.fullName } });
+    }
+
+    if (WATCH_INJURY_STATUSES.has(player.injuryStatus)) {
+      alerts.push({
+        type: 'injury',
+        slotId: e.lineupSlotId,
+        player: { id: player.id, name: player.fullName, status: player.injuryStatus },
+      });
+    }
+  }
+
+  return alerts;
+}
+
+/**
  * トレンド（所有率の増加）を手がかりにしたウェイバー候補の提案。
  * あくまで参考情報 — 通知のみで自動請求はしない（判断が要る領域のため）。
  */
@@ -152,10 +183,12 @@ module.exports = {
   POS_NAME,
   LOCKOUT_STATUSES,
   IR_ELIGIBLE_STATUSES,
+  WATCH_INJURY_STATUSES,
   projectedPoints,
   buildKickoffMap,
   kickoffFor,
   planLineupSwaps,
   planIRMoves,
+  planLineupAlerts,
   buildWaiverSuggestions,
 };
