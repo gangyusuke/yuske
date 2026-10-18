@@ -128,3 +128,8 @@ Discordに通知するだけにしています。数週間分の通知内容が�
 6. **本番切り替え**
    Discordに届く提案内容（スワップ・IR移動・ウェイバー判断）を数週間チェックし、
    問題なければ Secrets の `DRY_RUN` を `false` に変更する。以降は完全に無人で回る。
+
+## TikTok Shop 一人法人キット
+
+一人法人でTikTok Shop副業を始めるための設立ガイドと、8役割のAI従業員
+（Claude Code サブエージェント）は [`tiktok-shop/README.md`](tiktok-shop/README.md) を参照。
